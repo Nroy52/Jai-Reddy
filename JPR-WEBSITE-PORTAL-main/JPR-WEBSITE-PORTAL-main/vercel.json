@@ -1,5 +1,6 @@
 {
   "redirects": [
+    { "source": "/", "destination": "/portal", "permanent": false },
     { "source": "/favicon.ico", "destination": "/placeholder.svg", "permanent": true }
   ],
   "rewrites": [
