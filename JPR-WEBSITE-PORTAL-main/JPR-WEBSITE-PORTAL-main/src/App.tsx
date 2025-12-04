@@ -54,9 +54,8 @@ const OriginGuard = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App = () => {
-  // Derive basename from Vite BASE_URL for correct routing
-  const baseUrl = import.meta.env.BASE_URL;
-  const basename = baseUrl === "/" ? "/" : baseUrl.replace(/\/$/, "");
+  // Use /portal in production (Vercel) and / in dev/preview
+  const basename = import.meta.env.DEV ? "/" : "/portal";
 
   return (
     <QueryClientProvider client={queryClient}>
