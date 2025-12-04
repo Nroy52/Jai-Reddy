@@ -3,6 +3,7 @@
     { "source": "/favicon.ico", "destination": "/placeholder.svg", "permanent": true }
   ],
   "rewrites": [
+    { "source": "/portal/:path*", "destination": "/index.html" },
     { "source": "/((?!assets|.*\\..*).*)", "destination": "/index.html" }
   ]
 }
