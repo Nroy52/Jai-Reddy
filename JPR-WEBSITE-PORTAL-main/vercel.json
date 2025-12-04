@@ -1,0 +1,14 @@
+{
+  "framework": "vite",
+  "installCommand": "cd JPR-WEBSITE-PORTAL-main && npm install",
+  "buildCommand": "cd JPR-WEBSITE-PORTAL-main && npm run build",
+  "outputDirectory": "JPR-WEBSITE-PORTAL-main/dist",
+  "redirects": [
+    { "source": "/", "destination": "/portal", "permanent": false },
+    { "source": "/favicon.ico", "destination": "/placeholder.svg", "permanent": true }
+  ],
+  "rewrites": [
+    { "source": "/portal/:path*", "destination": "/index.html" },
+    { "source": "/((?!assets|.*\\..*).*)", "destination": "/index.html" }
+  ]
+}
