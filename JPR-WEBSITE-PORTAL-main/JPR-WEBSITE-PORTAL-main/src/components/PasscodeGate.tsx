@@ -51,12 +51,7 @@ export function PasscodeGate({ onUnlock, onCancel }: PasscodeGateProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            <strong>Demo Mode:</strong> This encryption is for demonstration only. Do not use for real sensitive data.
-          </AlertDescription>
-        </Alert>
+
 
         <div className="space-y-4 pt-2">
           <div className="space-y-2">

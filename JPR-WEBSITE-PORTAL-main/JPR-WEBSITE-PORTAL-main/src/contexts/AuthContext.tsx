@@ -1,23 +1,16 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import type { Session } from '@supabase/supabase-js';
 
+// Define roles strictly as per requirement
 export type UserRole =
-  | 'Super User'
-  | 'CEO'
-  | 'Director'
-  | 'Managing Director'
-  | 'Admin'
-  | 'Staff'
-  | 'IT Team'
-  | 'Family and Friends'
-  | 'CPDP Manager'
-  | 'CPDP TCO'
-  | 'CPDP Staff'
-  | 'CPDP Patients'
-  | 'CPDP Training'
-  | 'CPDP Network'
-  | 'Guest';
+  | 'Super User' | 'CEO' | 'Director' | 'Admin' | 'Staff'
+  | 'IT Team' | 'Family and Friends'
+  | 'CPDP Manager' | 'CPDP TCO' | 'CPDP Staff'
+  | 'CPDP Patients' | 'CPDP Training' | 'CPDP Network'
+  | 'Guest' | 'Managing Director' | 'Manager' | 'Consultant' | 'Partner';
 
-export type UserStatus = 'pending' | 'approved' | 'denied';
+export type UserStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
 
 export interface User {
   id: string;
@@ -25,206 +18,206 @@ export interface User {
   name: string;
   role: UserRole;
   teamTag?: string;
-  status?: UserStatus;
-  signupDate?: string;
+  status: UserStatus;
+  signupDate: string;
   lastLogin?: string;
 }
 
 interface AuthContextType {
+  loading: boolean;
+  session: Session | null;
   user: User | null;
-  login: (email: string, password: string) => { success: boolean; message?: string };
-  signup: (email: string, password: string, name: string, role: UserRole) => boolean;
-  logout: () => void;
   isAuthenticated: boolean;
-  getPendingUsers: () => User[];
-  approveUser: (userId: string) => void;
-  denyUser: (userId: string) => void;
-  updateUserRole: (role: UserRole) => void;
-  isLoading: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, fullName?: string, role?: UserRole) => Promise<void>;
+  signOut: () => Promise<void>;
+
+  // Legacy aliases for backward compatibility with existing components
+  login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
+  logout: () => Promise<void>;
+  getPendingUsers: () => Promise<User[]>;
+  getAllUsers: () => Promise<User[]>;
+  approveUser: (userId: string) => Promise<void>;
+  denyUser: (userId: string) => Promise<void>;
+  updateUserRole: (userId: string, role: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Super user - pre-approved with special access
-const SUPER_USER: User = {
-  id: 'super-1',
-  email: import.meta.env.VITE_SUPER_USER_EMAIL || 'superuser@raghava.ai',
-  name: import.meta.env.VITE_SUPER_USER_NAME || 'Super Administrator',
-  role: 'Super User',
-  status: 'approved'
-};
-
-// Demo users seeded in localStorage - all pre-approved
-const DEMO_USERS: User[] = [
-  { id: '1', email: 'ceo@raghava.ai', name: 'Dr (Maj) Jai Prathap Reddy', role: 'CEO', status: 'approved', signupDate: new Date().toISOString(), lastLogin: new Date().toISOString() },
-  { id: '16', email: 'md@raghava.ai', name: 'Managing Director', role: 'Managing Director', status: 'approved', signupDate: new Date().toISOString(), lastLogin: new Date().toISOString() },
-  { id: '2', email: 'director1@raghava.ai', name: 'Sarah Williams', role: 'Director', teamTag: 'Clinical', status: 'approved', signupDate: new Date().toISOString() },
-  { id: '3', email: 'director2@raghava.ai', name: 'Michael Chen', role: 'Director', teamTag: 'Operations', status: 'approved', signupDate: new Date().toISOString() },
-  { id: '4', email: 'admin@raghava.ai', name: 'Jane Admin', role: 'Admin', status: 'approved', signupDate: new Date().toISOString() },
-  { id: '5', email: 'staff1@raghava.ai', name: 'Alex Johnson', role: 'Staff', teamTag: 'Clinical', status: 'approved', signupDate: new Date().toISOString() },
-  { id: '6', email: 'staff2@raghava.ai', name: 'Maria Garcia', role: 'Staff', teamTag: 'Operations', status: 'approved', signupDate: new Date().toISOString() },
-  { id: '7', email: 'staff3@raghava.ai', name: 'David Lee', role: 'Staff', teamTag: 'Finance', status: 'approved', signupDate: new Date().toISOString() },
-  { id: '8', email: 'it@raghava.ai', name: 'James Wilson', role: 'IT Team', status: 'approved', signupDate: new Date().toISOString() },
-  { id: '9', email: 'family@raghava.ai', name: 'Emma Thompson', role: 'Family and Friends', status: 'approved', signupDate: new Date().toISOString() },
-  { id: '10', email: 'cpdp.manager@raghava.ai', name: 'Robert Anderson', role: 'CPDP Manager', status: 'approved', signupDate: new Date().toISOString() },
-  { id: '11', email: 'cpdp.tco@raghava.ai', name: 'Linda Martinez', role: 'CPDP TCO', status: 'approved', signupDate: new Date().toISOString() },
-  { id: '12', email: 'cpdp.staff1@raghava.ai', name: 'John Smith', role: 'CPDP Staff', teamTag: 'CPDP', status: 'approved', signupDate: new Date().toISOString() },
-  { id: '13', email: 'cpdp.patient1@raghava.ai', name: 'Mary Johnson', role: 'CPDP Patients', status: 'approved', signupDate: new Date().toISOString() },
-  { id: '14', email: 'cpdp.training@raghava.ai', name: 'Susan Brown', role: 'CPDP Training', status: 'approved', signupDate: new Date().toISOString() },
-  { id: '15', email: 'cpdp.network@raghava.ai', name: 'Thomas Davis', role: 'CPDP Network', status: 'approved', signupDate: new Date().toISOString() },
-];
-
-import { useUser, useClerk } from '@clerk/clerk-react';
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user: clerkUser, isLoaded: isClerkLoaded, isSignedIn } = useUser();
-  const { signOut, openSignIn, openSignUp } = useClerk();
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  // Watch session
   useEffect(() => {
-    // Initialize demo users and super user
-    const storedUsers = localStorage.getItem('raghava_users');
-    if (!storedUsers) {
-      const allUsers = [SUPER_USER, ...DEMO_USERS];
-      localStorage.setItem('raghava_users', JSON.stringify(allUsers));
-    } else {
-      let users: User[] = JSON.parse(storedUsers);
+    const initSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      setSession(data.session);
+      setLoading(false);
+    };
+    initSession();
 
-      // Remove any existing super user (by ID or by old email) to ensure we have the latest config
-      users = users.filter(u => u.id !== SUPER_USER.id && u.email !== 'superuser@raghava.ai');
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, s) => {
+        setSession(s);
+        setLoading(false);
+      }
+    );
 
-      // Add the current configured super user to the top
-      users.unshift(SUPER_USER);
-
-      localStorage.setItem('raghava_users', JSON.stringify(users));
-    }
+    return () => authListener.subscription.unsubscribe();
   }, []);
 
+  // Load profile when session changes
   useEffect(() => {
-    if (isClerkLoaded && isSignedIn && clerkUser) {
-      const email = clerkUser.primaryEmailAddress?.emailAddress;
-      if (email) {
-        const usersStr = localStorage.getItem('raghava_users');
-        if (usersStr) {
-          const users: User[] = JSON.parse(usersStr);
-          const foundUser = users.find(u => u.email === email);
+    const loadProfile = async () => {
+      if (!session) {
+        setUser(null);
+        return;
+      }
 
-          if (foundUser) {
-            // Update last login
-            foundUser.lastLogin = new Date().toISOString();
-            // Sync name from Clerk if needed
-            if (clerkUser.fullName && foundUser.name !== clerkUser.fullName) {
-              foundUser.name = clerkUser.fullName;
-            }
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
 
-            users[users.findIndex(u => u.id === foundUser.id)] = foundUser;
-            localStorage.setItem('raghava_users', JSON.stringify(users));
-            setUser(foundUser);
-          } else {
-            // Create new pending user with GUEST role
-            const newUser: User = {
-              id: clerkUser.id,
-              email: email,
-              name: clerkUser.fullName || 'New User',
-              role: 'Guest', // Default role is now Guest
-              status: 'pending',
-              signupDate: new Date().toISOString(),
-              lastLogin: new Date().toISOString()
-            };
-            users.push(newUser);
-            localStorage.setItem('raghava_users', JSON.stringify(users));
-            setUser(newUser);
+        // Handle case where profile might be missing (create default)
+        if (error && error.code === 'PGRST116') {
+          console.warn('Profile missing for user, attempting creation...');
+          const { data: newProfile, error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: session.user.id,
+              full_name: session.user.user_metadata?.full_name ?? session.user.email,
+              email: session.user.email,
+              role: 'Staff', // Default safe role
+              status: 'pending'
+            })
+            .select('*')
+            .single();
+
+          if (!insertError && newProfile) {
+            mapProfileToUser(newProfile);
           }
+        } else if (data) {
+          mapProfileToUser(data);
         }
+      } catch (err) {
+        console.error('Error loading profile:', err);
       }
-    } else if (isClerkLoaded && !isSignedIn) {
-      setUser(null);
-    }
-  }, [isClerkLoaded, isSignedIn, clerkUser]);
+    };
 
-  const login = (email: string, password: string): { success: boolean; message?: string } => {
-    // Redirect to Clerk Login
-    openSignIn();
-    return { success: true };
+    loadProfile();
+  }, [session]);
+
+  const mapProfileToUser = (profileData: any) => {
+    setUser({
+      id: profileData.id,
+      email: profileData.email || session?.user.email || '',
+      name: profileData.full_name || profileData.name || 'User',
+      role: (profileData.role as UserRole) || 'Guest',
+      teamTag: profileData.team_tag,
+      status: (profileData.status as UserStatus) || 'pending',
+      signupDate: profileData.created_at || new Date().toISOString(),
+      lastLogin: new Date().toISOString()
+    });
   };
 
-  const signup = (email: string, password: string, name: string, role: UserRole): boolean => {
-    // Redirect to Clerk Signup
-    openSignUp();
-    return true;
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
   };
 
-  const getPendingUsers = (): User[] => {
-    const usersStr = localStorage.getItem('raghava_users');
-    if (!usersStr) return [];
-
-    const users: User[] = JSON.parse(usersStr);
-    return users.filter(u => u.status === 'pending');
+  const signUp = async (email: string, password: string, fullName?: string, role: string = 'Staff') => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: fullName, name: fullName, role }, // Role hint for trigger
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    if (error) throw error;
   };
 
-  const approveUser = (userId: string) => {
-    const usersStr = localStorage.getItem('raghava_users');
-    if (!usersStr) return;
-
-    const users: User[] = JSON.parse(usersStr);
-    const userIndex = users.findIndex(u => u.id === userId);
-
-    if (userIndex !== -1) {
-      users[userIndex].status = 'approved';
-      localStorage.setItem('raghava_users', JSON.stringify(users));
-      // Force update if approving current user (unlikely but good for consistency)
-      if (user && user.id === userId) {
-        setUser({ ...user, status: 'approved' });
-      }
-    }
-  };
-
-  const denyUser = (userId: string) => {
-    const usersStr = localStorage.getItem('raghava_users');
-    if (!usersStr) return;
-
-    const users: User[] = JSON.parse(usersStr);
-    const userIndex = users.findIndex(u => u.id === userId);
-
-    if (userIndex !== -1) {
-      users[userIndex].status = 'denied';
-      localStorage.setItem('raghava_users', JSON.stringify(users));
-    }
-  };
-
-  const updateUserRole = (role: UserRole) => {
-    if (!user) return;
-
-    const usersStr = localStorage.getItem('raghava_users');
-    if (!usersStr) return;
-
-    const users: User[] = JSON.parse(usersStr);
-    const userIndex = users.findIndex(u => u.id === user.id);
-
-    if (userIndex !== -1) {
-      users[userIndex].role = role;
-      localStorage.setItem('raghava_users', JSON.stringify(users));
-      setUser({ ...user, role });
-    }
-  };
-
-  const logout = () => {
-    signOut();
+  const signOut = async () => {
+    await supabase.auth.signOut();
     setUser(null);
+    setSession(null);
+  };
+
+  // --- Legacy Adapters ---
+
+  const login = async (e: string, p: string) => {
+    try {
+      await signIn(e, p);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, message: err.message };
+    }
+  };
+
+  const logout = signOut;
+
+  const getPendingUsers = async () => {
+    const { data } = await supabase.from('profiles').select('*').eq('status', 'pending');
+    return (data || []).map((p: any) => ({
+      id: p.id,
+      email: p.email,
+      name: p.full_name || p.name,
+      role: p.role,
+      status: p.status,
+      signupDate: p.created_at,
+      lastLogin: p.last_login
+    } as User));
+  };
+
+  const getAllUsers = async () => {
+    const { data } = await supabase.from('profiles').select('*');
+    return (data || []).map((p: any) => ({
+      id: p.id,
+      email: p.email,
+      name: p.full_name || p.name,
+      role: p.role,
+      status: p.status,
+      signupDate: p.created_at,
+      lastLogin: p.last_login
+    } as User));
+  };
+
+  const approveUser = async (id: string) => {
+    const { error } = await supabase.from('profiles').update({ status: 'approved' }).eq('id', id);
+    if (error) throw error;
+  };
+
+  const denyUser = async (id: string) => {
+    const { error } = await supabase.from('profiles').update({ status: 'rejected' }).eq('id', id);
+    if (error) throw error;
+  };
+
+  const updateUserRole = async (id: string, role: string) => {
+    const { error } = await supabase.from('profiles').update({ role }).eq('id', id);
+    if (error) throw error;
   };
 
   return (
     <AuthContext.Provider value={{
+      loading,
+      session,
       user,
+      isAuthenticated: !!session,
+      signIn,
+      signUp,
+      signOut,
       login,
-      signup,
       logout,
-      isAuthenticated: !!user,
       getPendingUsers,
+      getAllUsers,
       approveUser,
       denyUser,
-      updateUserRole,
-      isLoading: !isClerkLoaded || (!!isSignedIn && user === null)
+      updateUserRole
     }}>
       {children}
     </AuthContext.Provider>
@@ -232,9 +225,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
 };

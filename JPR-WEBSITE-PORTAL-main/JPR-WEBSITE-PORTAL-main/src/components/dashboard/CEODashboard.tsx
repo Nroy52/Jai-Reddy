@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { CEO_DASHBOARD_DATA, Pillar } from '@/data/ceoDashboardData';
 import { getStatusEmoji, calculateAggregateTrend } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 
 const DomainCard = ({
   pillar,
@@ -46,7 +47,7 @@ const DomainCard = ({
           <Icon className="h-6 w-6" />
         </div>
         <h3 className="font-bold text-base leading-tight text-slate-800 dark:text-slate-100">
-          {index + 1}. {pillar.title} {getStatusEmoji(trend)}
+          F{index + 1}. {pillar.title} {getStatusEmoji(trend)}
         </h3>
         <p className="text-[10px] text-slate-500 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
           Click to view 10 KPIs
@@ -56,10 +57,11 @@ const DomainCard = ({
   );
 };
 
-export const CEODashboard = () => {
+export const CEODashboard = ({ activeObjectives = 0, netWorth = null }: { activeObjectives?: number; netWorth?: number | null }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [tasks, setTasks] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -67,7 +69,38 @@ export const CEODashboard = () => {
     if (savedImage) {
       setProfileImage(savedImage);
     }
+    fetchTasks();
   }, []);
+
+  const fetchTasks = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*');
+
+      if (error) throw error;
+
+      if (data) {
+        const mappedTasks = data.map(t => ({
+          id: t.id,
+          title: t.title,
+          description: t.description,
+          status: t.status,
+          priority: t.priority,
+          dueDate: t.due_date,
+          assigneeId: t.assignee_user_id || t.user_id, // Support new schema
+          ftuId: t.ftu_id
+        }));
+        setTasks(mappedTasks);
+      }
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+    }
+  };
+
+  const formattedNetWorth = netWorth !== null
+    ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact' }).format(netWorth)
+    : '$12.4M'; // Fallback
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -89,6 +122,7 @@ export const CEODashboard = () => {
         <div className="max-w-[1600px] mx-auto space-y-8">
 
           {/* Header */}
+          {/* Header */}
           <div className="flex items-center gap-6">
             <div className="relative group">
               <div
@@ -96,27 +130,21 @@ export const CEODashboard = () => {
                 onClick={() => fileInputRef.current?.click()}
                 title="Click to change profile photo"
               >
+                {/* ... existing profile image rendering ... */}
                 {profileImage ? (
                   <img src={profileImage} alt="Profile" className="h-full w-full object-cover" />
                 ) : (
                   <Users className="h-10 w-10 text-slate-400" />
                 )}
-                <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Camera className="h-6 w-6 text-white mb-1" />
-                  <span className="text-xs text-white font-medium">Change</span>
+                {/* Overlay for hover effect */}
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Camera className="h-6 w-6 text-white" />
                 </div>
               </div>
-
-              {/* Edit Badge */}
-              <button
-                className="absolute 0 -right-1 p-2 bg-white dark:bg-slate-700 rounded-full shadow-md border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors z-10"
-                style={{ bottom: '0px' }}
-                onClick={() => fileInputRef.current?.click()}
-                title="Edit profile photo"
-              >
-                <Pencil className="h-4 w-4 text-slate-600 dark:text-slate-300" />
-              </button>
-
+              <div className="absolute -bottom-2 -right-2 bg-white dark:bg-slate-800 p-2 rounded-full shadow-md border border-slate-100 dark:border-slate-700 cursor-pointer hover:scale-110 transition-transform"
+                onClick={() => fileInputRef.current?.click()}>
+                <Pencil className="h-3 w-3 text-slate-600 dark:text-slate-400" />
+              </div>
               <input
                 type="file"
                 ref={fileInputRef}
@@ -127,7 +155,7 @@ export const CEODashboard = () => {
             </div>
             <div>
               <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-1">
-                Welcome {user?.role}, {user?.name} {getStatusEmoji(calculateAggregateTrend(CEO_DASHBOARD_DATA.flatMap(p => p.kpis)))}
+                Welcome {user?.role || 'CEO'}, {user?.name} {getStatusEmoji(calculateAggregateTrend(CEO_DASHBOARD_DATA.flatMap(p => p.kpis)))}
               </h1>
               <p className="text-lg text-slate-500 dark:text-slate-400">
                 {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -137,12 +165,13 @@ export const CEODashboard = () => {
 
           {/* Top Stats Row */}
           <div className="grid md:grid-cols-3 gap-4">
+            {/* Net Worth Card */}
             <Card className="bg-white dark:bg-slate-900 shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Net Worth Today</p>
-                    <h3 className="text-2xl font-bold mt-1">$12.4M</h3>
+                    <h3 className="text-2xl font-bold mt-1">{formattedNetWorth}</h3>
                   </div>
                   <div className="p-1.5 bg-green-100 text-green-600 rounded-lg">
                     <TrendingUp className="h-4 w-4" />
@@ -199,61 +228,66 @@ export const CEODashboard = () => {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg font-bold flex items-center gap-2">
                     <AlertCircle className="h-5 w-5 text-red-500" />
-                    Priority Attention
+                    Priority Attention (Next 3 Steps)
                   </CardTitle>
-                  <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-900 dark:hover:text-slate-100">
+                  <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-900 dark:hover:text-slate-100" onClick={() => navigate('/tasks')}>
                     View All
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {[
-                    {
-                      title: "Q3 Financial Review",
-                      desc: "Review and approve the quarterly financial statement.",
-                      priority: "High",
-                      due: "Today",
-                      color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
-                    },
-                    {
-                      title: "Board Meeting Prep",
-                      desc: "Finalize slides for the upcoming board meeting.",
-                      priority: "Medium",
-                      due: "Tomorrow",
-                      color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
-                    },
-                    {
-                      title: "New Hire Approval",
-                      desc: "Approve the offer letter for the new CTO.",
-                      priority: "Low",
-                      due: "Next Week",
-                      color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                  {(() => {
+                    const priorityTasks = tasks
+                      .filter((t: any) => t.status !== 'Done' && (t.priority === 'Critical' || t.priority === 'High'))
+                      .sort((a: any, b: any) => {
+                        // Sort by priority (Critical first) then due date
+                        if (a.priority === 'Critical' && b.priority !== 'Critical') return -1;
+                        if (b.priority === 'Critical' && a.priority !== 'Critical') return 1;
+                        return new Date(a.dueDate || '9999-12-31').getTime() - new Date(b.dueDate || '9999-12-31').getTime();
+                      })
+                      .slice(0, 3);
+
+                    if (priorityTasks.length === 0) {
+                      return (
+                        <div className="text-center py-8 text-muted-foreground">
+                          No critical or high priority tasks pending.
+                        </div>
+                      );
                     }
-                  ].map((alert, i) => (
-                    <div key={i} className="flex items-start gap-4 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-800">
-                      <div className={`p-2 rounded-full ${alert.color.split(' ')[0]} ${alert.color.split(' ')[1]}`}>
-                        <AlertCircle className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className="font-semibold text-slate-900 dark:text-slate-100">{alert.title}</h4>
-                          <Badge variant="outline" className={`${alert.color} border-none`}>
-                            {alert.priority}
-                          </Badge>
+
+                    return priorityTasks.map((task: any, i: number) => (
+                      <div key={task.id} className="flex items-start gap-4 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-800 cursor-pointer" onClick={() => navigate('/tasks')}>
+                        <div className={`p-2 rounded-full ${task.priority === 'Critical' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'}`}>
+                          <AlertCircle className="h-4 w-4" />
                         </div>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">{alert.desc}</p>
-                        <div className="flex items-center gap-4 text-xs text-slate-400">
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" /> Due: {alert.due}
-                          </span>
-                          <button className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">
-                            Take Action
-                          </button>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <h4 className="font-semibold text-slate-900 dark:text-slate-100">{task.title}</h4>
+                            <Badge variant="outline" className={`${task.priority === 'Critical' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-700 border-amber-200'} border-none`}>
+                              {task.priority}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 mb-2 line-clamp-1">{task.description || 'No description'}</p>
+                          <div className="flex items-center gap-4 text-xs text-slate-400">
+                            {task.dueDate && (
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" /> Due: {new Date(task.dueDate).toLocaleDateString()}
+                              </span>
+                            )}
+                            {task.ftuId && (
+                              <span className="flex items-center gap-1">
+                                <Target className="h-3 w-3" /> {task.ftuId}
+                              </span>
+                            )}
+                            <button className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium ml-auto">
+                              Take Action
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ));
+                  })()}
                 </div>
               </CardContent>
             </Card>
@@ -318,8 +352,8 @@ export const CEODashboard = () => {
             ))}
           </div>
 
-        </div>
-      </div>
-    </div>
+        </div >
+      </div >
+    </div >
   );
 };

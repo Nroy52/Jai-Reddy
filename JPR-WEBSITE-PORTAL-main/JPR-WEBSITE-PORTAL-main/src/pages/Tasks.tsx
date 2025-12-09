@@ -9,60 +9,134 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Download, MessageSquare, Calendar, User } from 'lucide-react';
+import { Plus, Download, MessageSquare, Calendar, User, Loader2 } from 'lucide-react';
 import { Task, TaskComment } from '@/lib/seed';
 import { useAuth, User as AuthUser } from '@/contexts/AuthContext';
 import { exportTasksCSV } from '@/lib/csv';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
 
 const Tasks = () => {
   const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showAddTask, setShowAddTask] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [approvedUsers, setApprovedUsers] = useState<AuthUser[]>([]);
+  const [ftuFilter, setFtuFilter] = useState('');
 
-  // Load tasks and users
+  // Load tasks from Supabase
+  const fetchTasks = async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('tasks')
+        .select(`
+          *,
+          comments:task_comments(*)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data) {
+        const mappedTasks: Task[] = data.map(item => ({
+          id: item.id,
+          title: item.title,
+          description: item.description,
+          status: item.status,
+          priority: item.priority,
+          dueDate: item.due_date,
+          assigneeUserId: item.assignee_user_id,
+          createdByUserId: item.created_by_user_id,
+          ftuId: item.ftu_id,
+          comments: (item.comments || []).map((c: any) => ({
+            id: c.id,
+            authorUserId: c.author_user_id,
+            text: c.text,
+            createdAt: c.created_at
+          })),
+          createdAt: item.created_at,
+          updatedAt: item.updated_at
+        }));
+        setTasks(mappedTasks);
+      }
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load tasks',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load users for assignee picker
   useEffect(() => {
-    const stored = localStorage.getItem('raghava:tasks');
-    if (stored) {
-      setTasks(JSON.parse(stored));
-    }
+    fetchTasks();
 
-    // Load approved users from localStorage
-    const usersStr = localStorage.getItem('raghava_users');
-    if (usersStr) {
-      const users: AuthUser[] = JSON.parse(usersStr);
-      const approved = users.filter(u => u.status === 'approved');
-      setApprovedUsers(approved);
-    }
+    // Load approved users from Supabase
+    const loadUsers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, name, email, role, team_tag, status');
+
+        if (data) {
+          const mappedUsers: AuthUser[] = data
+            .filter(u => u.status === 'approved')
+            .map(u => ({
+              id: u.id,
+              name: u.name || u.email || 'Unknown',
+              email: u.email,
+              role: u.role as any,
+              teamTag: u.team_tag,
+              status: u.status as any,
+              signupDate: new Date().toISOString()
+            }));
+          setApprovedUsers(mappedUsers);
+        }
+      } catch (err) {
+        console.error('Failed to load users for tasks', err);
+      }
+    };
+
+    loadUsers();
   }, []);
 
-  // Filter tasks based on role
+  // Filter tasks based on role and FTU
   const getVisibleTasks = () => {
     if (!user) return [];
-    
-    return tasks.filter(task => {
-      if (user.role === 'CEO' || user.role === 'Admin' || user.role === 'Super User') {
+
+    let filtered = tasks.filter(task => {
+      if (user.role === 'CEO' || user.role === 'Admin' || user.role === 'Super User' || user.role === 'Managing Director' || user.role === 'Partner') {
         return true; // See all tasks
       }
-      
+
       if (user.role === 'Director') {
         // See tasks they created, assigned to them, or assigned to same team
         const assignee = approvedUsers.find(u => u.id === task.assigneeUserId);
-        return task.createdByUserId === user.id || 
-               task.assigneeUserId === user.id ||
-               (assignee?.teamTag && assignee.teamTag === user.teamTag);
+        return task.createdByUserId === user.id ||
+          task.assigneeUserId === user.id ||
+          (assignee?.teamTag && assignee.teamTag === user.teamTag);
       }
-      
+
       if (user.role === 'Staff') {
         // See tasks they created or assigned to them
         return task.createdByUserId === user.id || task.assigneeUserId === user.id;
       }
-      
+
       return false;
     });
+
+    if (ftuFilter) {
+      filtered = filtered.filter(t => t.ftuId?.toLowerCase().includes(ftuFilter.toLowerCase()));
+    }
+
+    return filtered;
   };
 
   const visibleTasks = getVisibleTasks();
@@ -71,78 +145,106 @@ const Tasks = () => {
     return visibleTasks.filter(t => t.status === status);
   };
 
-  const handleAddTask = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAddTask = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user) return;
 
     const formData = new FormData(e.currentTarget);
-    const newTask: Task = {
-      id: `t${Date.now()}`,
+    const newTaskData = {
       title: formData.get('title') as string,
-      description: formData.get('description') as string || undefined,
+      description: formData.get('description') as string || null,
       status: 'Backlog',
       priority: formData.get('priority') as Task['priority'],
-      dueDate: formData.get('dueDate') as string || undefined,
-      assigneeUserId: formData.get('assigneeUserId') as string,
-      createdByUserId: user.id,
-      ftuId: formData.get('ftuId') as string || undefined,
-      comments: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      due_date: formData.get('dueDate') as string || null,
+      assignee_user_id: formData.get('assigneeUserId') as string,
+      created_by_user_id: user.id,
+      ftu_id: formData.get('ftuId') as string || null,
     };
 
-    const updated = [...tasks, newTask];
-    setTasks(updated);
-    localStorage.setItem('raghava:tasks', JSON.stringify(updated));
-    setShowAddTask(false);
-    toast({
-      title: 'Success',
-      description: 'Task created successfully'
-    });
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .insert([newTaskData]);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Task created successfully'
+      });
+      setShowAddTask(false);
+      fetchTasks();
+    } catch (error: any) {
+      console.error('Error creating task:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create task',
+        variant: 'destructive'
+      });
+    }
   };
 
-  const updateTaskStatus = (taskId: string, newStatus: Task['status']) => {
-    const updated = tasks.map(t =>
-      t.id === taskId ? { ...t, status: newStatus, updatedAt: new Date().toISOString() } : t
-    );
-    setTasks(updated);
-    localStorage.setItem('raghava:tasks', JSON.stringify(updated));
-    toast({
-      title: 'Updated',
-      description: `Task moved to ${newStatus}`
-    });
+  const updateTaskStatus = async (taskId: string, newStatus: Task['status']) => {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq('id', taskId);
+
+      if (error) throw error;
+
+      // Optimistic update
+      setTasks(tasks.map(t =>
+        t.id === taskId ? { ...t, status: newStatus } : t
+      ));
+
+      toast({
+        title: 'Updated',
+        description: `Task moved to ${newStatus}`
+      });
+    } catch (error) {
+      console.error('Error updating task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update task status',
+        variant: 'destructive'
+      });
+      fetchTasks(); // Revert on error
+    }
   };
 
-  const addComment = (taskId: string) => {
+  const addComment = async (taskId: string) => {
     if (!user || !newComment.trim()) return;
 
-    const comment: TaskComment = {
-      id: `tc${Date.now()}`,
-      authorUserId: user.id,
-      text: newComment,
-      createdAt: new Date().toISOString()
-    };
+    try {
+      const { error } = await supabase
+        .from('task_comments')
+        .insert([{
+          task_id: taskId,
+          author_user_id: user.id,
+          text: newComment
+        }]);
 
-    const updated = tasks.map(t =>
-      t.id === taskId
-        ? { ...t, comments: [...t.comments, comment], updatedAt: new Date().toISOString() }
-        : t
-    );
+      if (error) throw error;
 
-    setTasks(updated);
-    localStorage.setItem('raghava:tasks', JSON.stringify(updated));
-    setNewComment('');
-    
-    // Update selected task
-    const updatedTask = updated.find(t => t.id === taskId);
-    if (updatedTask) {
-      setSelectedTask(updatedTask);
+      setNewComment('');
+      toast({
+        title: 'Comment Added',
+        description: 'Your comment has been posted'
+      });
+      fetchTasks();
+
+      // We need to update selectedTask as well if it's open
+      // fetchTasks will update 'tasks', but selectedTask is a separate state object
+      // We'll rely on the user closing/reopening or we can manually fetch the single task
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add comment',
+        variant: 'destructive'
+      });
     }
-
-    toast({
-      title: 'Comment Added',
-      description: 'Your comment has been posted'
-    });
   };
 
   const getUserName = (userId: string) => {
@@ -161,7 +263,7 @@ const Tasks = () => {
 
   const StatusColumn = ({ status, title }: { status: Task['status']; title: string }) => {
     const columnTasks = getTasksByStatus(status);
-    
+
     return (
       <div className="flex-1 min-w-[300px]">
         <Card>
@@ -186,7 +288,7 @@ const Tasks = () => {
                         <Badge variant={getPriorityColor(task.priority)}>{task.priority}</Badge>
                         {task.ftuId && <Badge variant="outline">{task.ftuId}</Badge>}
                       </div>
-                       <div className="text-xs text-muted-foreground space-y-1">
+                      <div className="text-xs text-muted-foreground space-y-1">
                         <div className="flex items-center gap-1">
                           <User className="h-3 w-3" />
                           {approvedUsers.find(u => u.id === task.assigneeUserId)?.name}
@@ -228,7 +330,17 @@ const Tasks = () => {
             <h1 className="text-4xl font-bold mb-2">Tasks</h1>
             <p className="text-muted-foreground text-lg">Kanban board and task management</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-4">
+            <div className="w-48">
+              <Label htmlFor="ftu-filter" className="sr-only">Filter by FTU</Label>
+              <Input
+                id="ftu-filter"
+                placeholder="Filter by FTU..."
+                value={ftuFilter}
+                onChange={(e) => setFtuFilter(e.target.value)}
+                className="h-9"
+              />
+            </div>
             <Button onClick={() => exportTasksCSV(visibleTasks)} variant="outline">
               <Download className="h-4 w-4 mr-2" />
               Export CSV

@@ -3,7 +3,25 @@
  * Provides deterministic dummy data for all features
  */
 
-export type UserRole = 'CEO' | 'Director' | 'Admin' | 'Staff';
+export type UserRole =
+  | 'Super User'
+  | 'CEO'
+  | 'Director'
+  | 'Managing Director'
+  | 'Admin'
+  | 'Staff'
+  | 'IT Team'
+  | 'Family and Friends'
+  | 'CPDP Manager'
+  | 'CPDP TCO'
+  | 'CPDP Staff'
+  | 'CPDP Patients'
+  | 'CPDP Training'
+  | 'CPDP Network'
+  | 'Guest'
+  | 'Manager'
+  | 'Consultant'
+  | 'Partner';
 
 export interface User {
   id: string;
@@ -91,7 +109,7 @@ export interface PasswordItem {
 
 // Mulberry32 PRNG for deterministic randomness
 function mulberry32(seed: number) {
-  return function() {
+  return function () {
     let t = seed += 0x6D2B79F5;
     t = Math.imul(t ^ t >>> 15, t | 1);
     t ^= t + Math.imul(t ^ t >>> 7, t | 61);
@@ -112,7 +130,7 @@ export function generateSparklineData(ftuCode: string): number[] {
   const rng = mulberry32(hash);
   const baseScore = generateTopicScore(ftuCode);
   const trend = (rng() - 0.5) * 10; // -5 to +5 trend
-  
+
   const data: number[] = [];
   for (let i = 0; i < 8; i++) {
     const variance = (rng() - 0.5) * 8;
@@ -476,9 +494,9 @@ export const SEED_CONTACTS: Contact[] = [
 // Seed tasks (40+)
 export const SEED_TASKS: Task[] = [
   {
-    id: 't1', title: 'Q1 Strategic Review', description: 'Review organizational strategy for Q1', 
-    status: 'Doing', priority: 'Critical', dueDate: '2024-04-15', 
-    assigneeUserId: '1', createdByUserId: '1', ftuId: 'F10.T1', 
+    id: 't1', title: 'Q1 Strategic Review', description: 'Review organizational strategy for Q1',
+    status: 'Doing', priority: 'Critical', dueDate: '2024-04-15',
+    assigneeUserId: '1', createdByUserId: '1', ftuId: 'F10.T1',
     comments: [{ id: 'tc1', authorUserId: '2', text: 'Started analysis', createdAt: '2024-03-10T10:00:00Z' }],
     createdAt: '2024-03-01T10:00:00Z', updatedAt: '2024-03-10T10:00:00Z'
   },
@@ -556,11 +574,11 @@ export const SEED_TASKS: Task[] = [
     assigneeUserId: String((i % 7) + 1),
     createdByUserId: String((i % 4) + 1),
     ftuId: i % 3 === 0 ? `F${(i % 10) + 1}.T${(i % 10) + 1}` : undefined,
-    comments: i % 5 === 0 ? [{ 
-      id: `tc${11 + i}`, 
-      authorUserId: String((i % 7) + 1), 
-      text: `Comment on task ${11 + i}`, 
-      createdAt: new Date(2024, 2, 15 + i).toISOString() 
+    comments: i % 5 === 0 ? [{
+      id: `tc${11 + i}`,
+      authorUserId: String((i % 7) + 1),
+      text: `Comment on task ${11 + i}`,
+      createdAt: new Date(2024, 2, 15 + i).toISOString()
     }] : [],
     createdAt: new Date(2024, 2, 10 + i).toISOString(),
     updatedAt: new Date(2024, 2, 10 + i).toISOString()
@@ -595,7 +613,7 @@ export const SEED_MESSAGES: MessageThread[] = [
     createdAt: '2024-03-07T11:00:00Z', updatedAt: '2024-03-07T14:00:00Z'
   },
   {
-    id: 'm4', title: 'Operations Planning', participantIds: ['3', '6'], 
+    id: 'm4', title: 'Operations Planning', participantIds: ['3', '6'],
     messages: [
       { id: 'msg8', senderId: '3', text: 'Need to optimize our workflows', timestamp: '2024-03-03T12:00:00Z' },
       { id: 'msg9', senderId: '6', text: 'I have some ideas to share', timestamp: '2024-03-03T13:00:00Z' },
@@ -603,7 +621,7 @@ export const SEED_MESSAGES: MessageThread[] = [
     createdAt: '2024-03-03T12:00:00Z', updatedAt: '2024-03-03T13:00:00Z'
   },
   {
-    id: 'm5', title: 'Admin Updates', participantIds: ['1', '4'], 
+    id: 'm5', title: 'Admin Updates', participantIds: ['1', '4'],
     messages: [
       { id: 'msg10', senderId: '4', text: 'Training schedule is finalized', timestamp: '2024-03-04T09:00:00Z' },
       { id: 'msg11', senderId: '1', text: 'Great work!', timestamp: '2024-03-04T09:15:00Z' },
@@ -617,17 +635,17 @@ export const SEED_MESSAGES: MessageThread[] = [
     linkedTaskId: i % 3 === 0 ? `t${10 + i}` : undefined,
     ftuId: i % 2 === 0 ? `F${(i % 10) + 1}.T${(i % 5) + 1}` : undefined,
     messages: [
-      { 
-        id: `msg${12 + i * 2}`, 
-        senderId: String((i % 7) + 1), 
-        text: `Message ${i + 1} content`, 
-        timestamp: new Date(2024, 2, 5 + i, 10, 0).toISOString() 
+      {
+        id: `msg${12 + i * 2}`,
+        senderId: String((i % 7) + 1),
+        text: `Message ${i + 1} content`,
+        timestamp: new Date(2024, 2, 5 + i, 10, 0).toISOString()
       },
-      { 
-        id: `msg${13 + i * 2}`, 
-        senderId: String(((i + 1) % 7) + 1), 
-        text: `Reply to message ${i + 1}`, 
-        timestamp: new Date(2024, 2, 5 + i, 10, 30).toISOString() 
+      {
+        id: `msg${13 + i * 2}`,
+        senderId: String(((i + 1) % 7) + 1),
+        text: `Reply to message ${i + 1}`,
+        timestamp: new Date(2024, 2, 5 + i, 10, 30).toISOString()
       },
     ],
     createdAt: new Date(2024, 2, 5 + i, 10, 0).toISOString(),
@@ -638,8 +656,8 @@ export const SEED_MESSAGES: MessageThread[] = [
 // Seed vault items (12+)
 export const SEED_VAULT_ITEMS: VaultItem[] = [
   {
-    id: 'v1', title: 'Strategic Plan 2024', type: 'doc', 
-    value: 'Q1 2024 Strategic Initiatives...', tags: ['Strategy', 'Planning'], 
+    id: 'v1', title: 'Strategic Plan 2024', type: 'doc',
+    value: 'Q1 2024 Strategic Initiatives...', tags: ['Strategy', 'Planning'],
     ftuId: 'F10.T1', sensitivity: 'High', createdAt: '2024-01-15T10:00:00Z'
   },
   {
@@ -746,7 +764,7 @@ export const SEED_PASSWORD_ITEMS: PasswordItem[] = [
 // Initialize all seed data in localStorage
 export function initializeSeedData() {
   const prefix = 'raghava:';
-  
+
   // Only seed if not already initialized
   if (localStorage.getItem(`${prefix}seed:initialized`)) {
     return;
@@ -754,26 +772,26 @@ export function initializeSeedData() {
 
   // Users
   localStorage.setItem(`${prefix}users`, JSON.stringify(SEED_USERS));
-  
+
   // Contacts
   localStorage.setItem(`${prefix}contacts`, JSON.stringify(SEED_CONTACTS));
-  
+
   // Tasks
   localStorage.setItem(`${prefix}tasks`, JSON.stringify(SEED_TASKS));
-  
+
   // Messages
   localStorage.setItem(`${prefix}messages`, JSON.stringify(SEED_MESSAGES));
-  
+
   // Vault items
   localStorage.setItem(`${prefix}vault:items`, JSON.stringify(SEED_VAULT_ITEMS));
-  
+
   // Password items
   localStorage.setItem(`${prefix}pm:items`, JSON.stringify(SEED_PASSWORD_ITEMS));
-  
+
   // Topic scores
   const topicScores = generateTopicScoreMap();
   localStorage.setItem(`${prefix}topic:scores`, JSON.stringify(topicScores));
-  
+
   // Mark as initialized
   localStorage.setItem(`${prefix}seed:initialized`, 'true');
 }

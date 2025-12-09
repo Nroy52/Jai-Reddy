@@ -51,7 +51,7 @@ const PillarPage = () => {
                     </div>
                     <div>
                         <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-                            {pillarIndex}. {pillar.title} {getStatusEmoji(calculateAggregateTrend(pillar.kpis))}
+                            F{pillarIndex}. {pillar.title} {getStatusEmoji(calculateAggregateTrend(pillar.kpis))}
                         </h1>
                         <p className="text-slate-500 dark:text-slate-400">
                             10 Key Performance Indicators (The 100 Layer)
@@ -70,10 +70,12 @@ const PillarPage = () => {
                             <div className="absolute inset-0 bg-white/40 dark:bg-black/20 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity" />
                             <CardContent className="p-6 flex flex-col items-center justify-center text-center h-full relative z-10">
                                 <div className={`p-4 rounded-full bg-white/90 shadow-sm mb-4 group-hover:scale-110 transition-transform duration-300 ${pillar.colorClass}`}>
-                                    <Icon className="h-8 w-8" />
+                                    <span className="text-3xl" role="img" aria-label="status">
+                                        {getStatusEmoji(kpi.trend)}
+                                    </span>
                                 </div>
                                 <h3 className="font-bold text-lg leading-tight text-slate-800 dark:text-slate-100 mb-2">
-                                    {pillarIndex}.{index + 1} {kpi.title} {getStatusEmoji(kpi.trend)}
+                                    F{pillarIndex}.T{index + 1} {kpi.title}
                                 </h3>
                                 <div className="flex items-center gap-2">
                                     <span className="text-xl font-bold text-slate-700 dark:text-slate-200">
@@ -102,7 +104,7 @@ const PillarPage = () => {
                             <DialogHeader className="p-6 border-b bg-white dark:bg-slate-950">
                                 <div className="flex items-center justify-between">
                                     <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                                        {pillarIndex}.{pillar.kpis.findIndex(k => k.id === selectedKPI.id) + 1} {selectedKPI.title} {getStatusEmoji(selectedKPI.trend)}
+                                        F{pillarIndex}.T{pillar.kpis.findIndex(k => k.id === selectedKPI.id) + 1} {selectedKPI.title} {getStatusEmoji(selectedKPI.trend)}
                                         <Badge variant="outline" className="ml-2 text-sm font-normal">
                                             Current: {selectedKPI.value}
                                         </Badge>
@@ -137,7 +139,12 @@ const PillarPage = () => {
                                 <div className="grid sm:grid-cols-2 gap-3">
                                     {selectedKPI.datapoints.map((dp) => (
                                         <div key={dp.id} className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700">
-                                            <span className="text-sm text-slate-600 dark:text-slate-400">{dp.label}</span>
+                                            <span className="text-sm text-slate-600 dark:text-slate-400">
+                                                <span className="font-mono font-bold text-slate-400 mr-2">
+                                                    F{pillarIndex}.T{pillar.kpis.findIndex(k => k.id === selectedKPI.id) + 1}.U{selectedKPI.datapoints.findIndex(d => d.id === dp.id) + 1}
+                                                </span>
+                                                {dp.label}
+                                            </span>
                                             <div className="flex items-center gap-2">
                                                 <span className="font-mono font-medium">{dp.value}</span>
                                                 {dp.trend === 'up' && <TrendingUp className="h-3 w-3 text-green-500" />}

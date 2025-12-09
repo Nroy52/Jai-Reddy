@@ -8,7 +8,7 @@ const Landing = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-black">
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-[#050a18] via-[#000000] to-[#0a0f1e]">
       {/* Shadow background image on the LEFT side */}
       <div className="absolute left-0 top-0 bottom-0 w-1/2 opacity-30">
         <img src={shadowImage} alt="" className="w-full h-full object-cover" />
@@ -26,16 +26,16 @@ const Landing = () => {
           <div className="flex justify-center mb-12">
             <div className="relative">
               <div className="w-48 h-48 lg:w-64 lg:h-64 flex items-center justify-center">
-                <img 
-                  src={jprLogo} 
+                <img
+                  src={jprLogo}
                   alt="JPR Logo"
                   className="w-32 h-32 lg:w-40 lg:h-40 object-contain"
                   style={{ filter: 'drop-shadow(0 0 40px rgba(205, 164, 52, 0.6))' }}
                 />
               </div>
               {/* Golden glow background */}
-              <div className="absolute inset-0 blur-3xl opacity-40" 
-                  style={{ background: 'radial-gradient(circle, rgba(205, 164, 52, 0.8) 0%, transparent 70%)' }} 
+              <div className="absolute inset-0 blur-3xl opacity-40"
+                style={{ background: 'radial-gradient(circle, rgba(205, 164, 52, 0.8) 0%, transparent 70%)' }}
               />
             </div>
           </div>
@@ -60,7 +60,7 @@ const Landing = () => {
             </div>
 
             {/* Quote */}
-            <blockquote className="text-xl lg:text-2xl italic font-semibold pt-6 max-w-2xl mx-auto" style={{ 
+            <blockquote className="text-xl lg:text-2xl italic font-semibold pt-6 max-w-2xl mx-auto" style={{
               color: '#CDA434',
               borderTop: '1px solid rgba(205, 164, 52, 0.3)'
             }}>
@@ -71,12 +71,12 @@ const Landing = () => {
 
           {/* Buttons */}
           <div className="pt-10 flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button 
+            <Button
               onClick={() => navigate("/vision")}
               size="lg"
               variant="outline"
               className="border-2 text-lg hover-lift shadow-lg px-10 py-6"
-              style={{ 
+              style={{
                 borderColor: '#CDA434',
                 color: '#CDA434',
                 backgroundColor: 'transparent'

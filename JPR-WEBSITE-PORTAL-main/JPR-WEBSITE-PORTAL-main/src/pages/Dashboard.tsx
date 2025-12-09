@@ -1,4 +1,4 @@
-
+import { useState, useEffect } from "react";
 import { useAuth, User } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -555,9 +555,25 @@ const Dashboard = () => {
   }
 
   // CEO-exclusive dashboard
-  return <CEODashboard />;
+  return <CEODashboardWrapper />;
+};
 
+// Wrapper to fetch data for CEO Dashboard
+const CEODashboardWrapper = () => {
+  const [netWorth, setNetWorth] = useState<number | null>(null);
+  const [activeObjectives, setActiveObjectives] = useState(0);
 
+  useEffect(() => {
+    // Fetch dashboard data
+    import('@/services/dashboardService').then(({ getTodayDashboard }) => {
+      getTodayDashboard().then(data => {
+        setNetWorth(data.netWorthToday);
+        setActiveObjectives(data.activeObjectives);
+      });
+    });
+  }, []);
+
+  return <CEODashboard activeObjectives={activeObjectives} netWorth={netWorth} />;
 };
 
 export default Dashboard;

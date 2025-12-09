@@ -1,6 +1,8 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 import {
   LayoutDashboard,
   Users,
@@ -14,9 +16,50 @@ import {
 import { toast } from 'sonner';
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [pendingTasks, setPendingTasks] = useState(0);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchNotifications = async () => {
+      // 1. Fetch unread tasks (Tasks assigned to user that are not Done)
+      const { count: taskCount } = await supabase
+        .from('tasks')
+        .select('*', { count: 'exact', head: true })
+        .eq('assignee_user_id', user.id)
+        .neq('status', 'Done');
+
+      if (taskCount !== null) setPendingTasks(taskCount);
+
+      // 2. Fetch unread messages
+      // Ideally we check a 'read' status table, but for now we'll just check threads with new activity
+      // A better implementation needs a 'last_read_at' per user per thread.
+      // For this MVP, we will count threads where the user is a participant.
+      // (This is a simplified "unread" badge, effectively showing total active threads for now)
+      // Real "unread" requires a separate 'thread_participants' table with 'last_read'.
+      // changing to just show total threads for now as a notification of activity center
+      const { count: msgCount } = await supabase
+        .from('message_threads')
+        .select('*', { count: 'exact', head: true })
+        .contains('participant_ids', [user.id]);
+
+      // NOTE: Proper unread count requires schema change (user_thread_status table).
+      // We will just show 0 or a dot if API supported it, but for now let's show 0 to avoid fake noise
+      // untill we implement read receipts.
+      // ACTUALLY: User asked for notifications. Let's just show open tasks for now as it is reliable.
+
+      // setUnreadMessages(msgCount || 0); 
+    };
+
+    fetchNotifications();
+    // Poll every 30 seconds
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const handleLogout = () => {
     logout();
@@ -47,6 +90,12 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         <nav className="flex-1 p-4 space-y-1">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
+
+            // Calculate Badge Count
+            let badgeCount = 0;
+            if (item.label === 'Messages') badgeCount = unreadMessages;
+            if (item.label === 'Tasks') badgeCount = pendingTasks;
+
             return (
               <Link key={item.path} to={item.path}>
                 <Button
@@ -55,7 +104,12 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                     }`}
                 >
                   <item.icon className="h-4 w-4 mr-3" />
-                  {item.label}
+                  <span className="flex-1 text-left">{item.label}</span>
+                  {badgeCount > 0 && (
+                    <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                      {badgeCount}
+                    </span>
+                  )}
                 </Button>
               </Link>
             );
