@@ -195,9 +195,10 @@ const Vault = () => {
       setShowAddDoc(false);
       toast({ title: 'Success', description: 'Item added to vault' });
       fetchVaultItems();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving item:', error);
-      toast({ title: 'Error', description: error.message || 'Failed to save item', variant: 'destructive' });
+      const description = error instanceof Error ? error.message : 'Failed to save item';
+      toast({ title: 'Error', description, variant: 'destructive' });
     }
   };
 

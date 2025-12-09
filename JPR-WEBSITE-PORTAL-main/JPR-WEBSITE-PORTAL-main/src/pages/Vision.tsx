@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Pill, Globe, Bot, Building2, GraduationCap, Sprout, Stethoscope, Rocket, Landmark, Gem } from "lucide-react";
+import { ArrowRight, Pill, Globe, Bot, Building2, GraduationCap, Sprout, Stethoscope, Rocket, Landmark, Gem, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import jprLogo from "@/assets/jaisirlogo.png";
 
@@ -18,7 +18,9 @@ const Vision = () => {
   const navigate = useNavigate();
   const [activePillar, setActivePillar] = useState<string | null>(null);
 
-  const pillarsLeft = [
+  type PillarCard = { icon: LucideIcon; title: string; desc: string };
+
+  const pillarsLeft: PillarCard[] = [
     { icon: Stethoscope, title: "HealthTech & Advanced Dental Sciences", desc: "Pioneering the future of healthcare and dental precision." },
     { icon: Pill, title: "Pharmaceuticals, Ayurveda & Nutraceutical Biology", desc: "Bridging ancient wisdom with modern science." },
     { icon: Rocket, title: "Aerospace, Robotics & Defense Systems", desc: "Engineering the next frontier of defense and exploration." },
@@ -26,7 +28,7 @@ const Vision = () => {
     { icon: GraduationCap, title: "Education, Leadership & VR Gurukul Systems", desc: "Revolutionizing learning through immersive technology." },
   ];
 
-  const pillarsRight = [
+  const pillarsRight: PillarCard[] = [
     { icon: Building2, title: "Real Estate, Smart Townships & Ecological Living (VishwaGrāma)", desc: "Creating sustainable habitats for future generations." },
     { icon: Sprout, title: "AgriTech, Rural Employment & Bamboo/Hemp Eco-Products", desc: "Empowering rural economies with sustainable innovation." },
     { icon: Landmark, title: "FinTech, Wealth Management & Global Family Dynasty Trusts", desc: "Securing legacies through financial excellence." },
@@ -38,7 +40,7 @@ const Vision = () => {
     setActivePillar((prev) => (prev === title ? null : title));
   };
 
-  const renderPillarCard = (pillar: { icon: any; title: string; desc: string }) => {
+  const renderPillarCard = (pillar: PillarCard) => {
     const isActive = activePillar === pillar.title;
     const Icon = pillar.icon;
     const cardStyle = {
@@ -147,6 +149,7 @@ const Vision = () => {
             <ArrowRight className="ml-2 inline h-5 w-5" />
           </Button>
         </div>
+
       </main>
 
       {/* FOOTER */}

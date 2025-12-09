@@ -177,9 +177,10 @@ const Contacts = () => {
       });
       setEditingContact(null);
       setIsAddDialogOpen(false);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving contact:', error);
-      toast.error(error.message || 'Failed to save contact');
+      const message = error instanceof Error ? error.message : 'Failed to save contact';
+      toast.error(message);
     } finally {
       setIsSaving(false);
     }

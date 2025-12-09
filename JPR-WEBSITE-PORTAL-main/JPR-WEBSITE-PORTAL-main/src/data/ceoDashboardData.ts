@@ -8,7 +8,8 @@ import {
     GraduationCap,
     Mic,
     Heart,
-    Eye
+    Eye,
+    type LucideIcon
 } from 'lucide-react';
 
 export interface Datapoint {
@@ -31,7 +32,7 @@ export interface KPI {
 export interface Pillar {
     id: string;
     title: string;
-    icon: any;
+    icon: LucideIcon;
     colorClass: string;
     gradientClass: string;
     kpis: KPI[];

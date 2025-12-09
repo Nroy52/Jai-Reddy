@@ -4,11 +4,13 @@
 
 import { Contact, Task, VaultItem, PasswordItem } from './seed';
 
+type CsvRow = Record<string, unknown>;
+
 /**
  * Convert array of objects to CSV string
  */
-function arrayToCSV(data: any[], headers: string[]): string {
-  const escape = (val: any): string => {
+function arrayToCSV<T extends CsvRow>(data: T[], headers: string[]): string {
+  const escape = (val: unknown): string => {
     if (val === null || val === undefined) return '';
     let str = String(val);
     // Mitigate CSV formula injection in spreadsheet apps

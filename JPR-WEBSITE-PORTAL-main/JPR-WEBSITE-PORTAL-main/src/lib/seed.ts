@@ -316,16 +316,8 @@ export function generateTopicScoreMap(): Record<string, number> {
   return map;
 }
 
-// Seed users
-export const SEED_USERS: User[] = [
-  { id: '1', email: 'ceo@raghava.ai', name: 'Dr (Maj) Jai Prathap Reddy', role: 'CEO' },
-  { id: '2', email: 'director1@raghava.ai', name: 'Sarah Williams', role: 'Director', teamTag: 'Clinical' },
-  { id: '3', email: 'director2@raghava.ai', name: 'Michael Chen', role: 'Director', teamTag: 'Operations' },
-  { id: '4', email: 'admin@raghava.ai', name: 'Jane Admin', role: 'Admin' },
-  { id: '5', email: 'staff1@raghava.ai', name: 'Alex Johnson', role: 'Staff', teamTag: 'Clinical' },
-  { id: '6', email: 'staff2@raghava.ai', name: 'Maria Garcia', role: 'Staff', teamTag: 'Operations' },
-  { id: '7', email: 'staff3@raghava.ai', name: 'David Lee', role: 'Staff', teamTag: 'Finance' },
-];
+// Seed users cleared (no demo accounts pre-loaded)
+export const SEED_USERS: User[] = [];
 
 // Seed contacts (30+)
 export const SEED_CONTACTS: Contact[] = [

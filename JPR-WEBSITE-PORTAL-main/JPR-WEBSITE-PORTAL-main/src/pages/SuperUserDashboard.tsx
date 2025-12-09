@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth, User } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,7 +49,7 @@ export const SuperUserDashboard = () => {
     'Consultant', 'Partner'
   ];
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const pending = await getPendingUsers();
       setPendingUsers(pending);
@@ -60,11 +60,11 @@ export const SuperUserDashboard = () => {
       console.error("Failed to load dashboard data", err);
       toast.error("Failed to load user data");
     }
-  };
+  }, [getAllUsers, getPendingUsers]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const handleApprove = async (userId: string, userName: string) => {
     try {
@@ -185,8 +185,9 @@ export const SuperUserDashboard = () => {
                     }
                   }
 
-                } catch (e: any) {
-                  alert(`Diagnostics Crashed: ${e.message}`);
+                } catch (e) {
+                  const message = e instanceof Error ? e.message : 'Unknown error';
+                  alert(`Diagnostics Crashed: ${message}`);
                   console.error(e);
                 }
               }}
@@ -325,7 +326,7 @@ export const SuperUserDashboard = () => {
                         onChange={(e) => setSearchQuery(e.target.value)}
                       />
                     </div>
-                    <Select value={selectedRole} onValueChange={(val: any) => setSelectedRole(val)}>
+                    <Select value={selectedRole} onValueChange={(val: string) => setSelectedRole(val)}>
                       <SelectTrigger className="w-[180px]">
                         <SelectValue placeholder="Filter by Role" />
                       </SelectTrigger>

@@ -4,14 +4,28 @@ import { supabase } from '@/lib/supabase';
 export interface DashboardData {
     netWorthToday: number | null;
     activeObjectives: number;
-    focusScores: any[]; // Or define a more specific type for focus scores
+    focusScores: FocusScore[];
+}
+
+export interface FocusScoreMeta {
+    net_worth?: number;
+    active_objectives?: number;
+    [key: string]: unknown;
+}
+
+export interface FocusScore {
+    id?: string;
+    date?: string;
+    focus?: string;
+    score?: number;
+    meta?: FocusScoreMeta;
 }
 
 export async function getTodayDashboard(): Promise<DashboardData> {
     const today = new Date().toISOString().slice(0, 10);
 
     const { data, error } = await supabase
-        .from('kpi_focus_scores')
+        .from<FocusScore>('kpi_focus_scores')
         .select('*')
         .eq('date', today);
 

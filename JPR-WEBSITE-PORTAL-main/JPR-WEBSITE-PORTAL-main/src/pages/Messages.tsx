@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Send, Users, Bell, Mail, Loader2 } from 'lucide-react';
-import { useAuth, User as AuthUser } from '@/contexts/AuthContext';
+import { useAuth, User as AuthUser, UserRole, UserStatus } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 
@@ -34,6 +34,33 @@ interface Thread {
   updatedAt: string;
 }
 
+type ProfileRow = {
+  id: string;
+  name?: string | null;
+  email: string;
+  role?: UserRole;
+  team_tag?: string | null;
+  status?: UserStatus;
+};
+
+type MessageRow = {
+  id: string;
+  sender_id: string;
+  text: string;
+  timestamp: string;
+};
+
+type ThreadRow = {
+  id: string;
+  title?: string | null;
+  type?: 'individual' | 'team' | 'all';
+  recipient_id?: string | null;
+  participant_ids?: string[];
+  messages?: MessageRow[];
+  updated_at: string;
+  ftu_id?: string | null;
+};
+
 const Messages = () => {
   const { user } = useAuth();
   const [threads, setThreads] = useState<Thread[]>([]);
@@ -55,7 +82,7 @@ const Messages = () => {
       // Since we want all approved users to populate the picker
       try {
         const { data, error } = await supabase
-          .from('profiles')
+          .from<ProfileRow>('profiles')
           .select('id, name, email, role, team_tag, status');
 
         if (data) {
@@ -65,9 +92,9 @@ const Messages = () => {
               id: u.id,
               name: u.name || u.email || 'Unknown',
               email: u.email,
-              role: u.role as any,
+              role: u.role || 'Guest',
               teamTag: u.team_tag,
-              status: u.status as any,
+              status: u.status || 'pending',
               signupDate: new Date().toISOString() // Not critical here
             }));
           setApprovedUsers(mappedUsers);
@@ -83,7 +110,7 @@ const Messages = () => {
   }, [user]);
 
   // Load threads and messages from Supabase
-  const fetchThreads = async () => {
+  const fetchThreads = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -94,7 +121,7 @@ const Messages = () => {
       // In production, use RLS and more specific queries
 
       const { data: threadsData, error } = await supabase
-        .from('message_threads')
+        .from<ThreadRow>('message_threads')
         .select(`
           *,
           messages (*)
@@ -104,21 +131,21 @@ const Messages = () => {
       if (error) throw error;
 
       if (threadsData) {
-        const mappedThreads: Thread[] = threadsData.map(t => {
-          const msgs = (t.messages || []).map((m: any) => ({
+        const mappedThreads: Thread[] = threadsData.map((t) => {
+          const msgs = (t.messages || []).map((m: MessageRow) => ({
             id: m.id,
             senderId: m.sender_id,
             text: m.text,
             timestamp: m.timestamp,
             read: true, // TODO: Implement read status in DB
-            ftuId: t.ftu_id // Inherit from thread for now or need message specific FTU
-          })).sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+            ftuId: t.ftu_id || undefined // Inherit from thread for now or need message specific FTU
+          })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
           return {
             id: t.id,
-            title: t.title,
+            title: t.title || undefined,
             type: t.type || 'individual',
-            recipientId: t.recipient_id,
+            recipientId: t.recipient_id || undefined,
             participantIds: t.participant_ids || [],
             messages: msgs,
             lastMessage: msgs[msgs.length - 1],
@@ -126,7 +153,6 @@ const Messages = () => {
             updatedAt: t.updated_at
           };
         });
-
         // Filter relevant threads
         const relevantThreads = mappedThreads.filter(t => {
           if (t.type === 'all') return true;
@@ -152,11 +178,11 @@ const Messages = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedThread, user]);
 
   useEffect(() => {
     fetchThreads();
-  }, [user]);
+  }, [fetchThreads]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -528,7 +554,7 @@ const Messages = () => {
                                     {msg.ftuId}
                                   </Badge>
                                 )}
-                                {getUserName(msg.senderId)} • {new Date(msg.timestamp).toLocaleString()}
+                                {getUserName(msg.senderId)} - {new Date(msg.timestamp).toLocaleString()}
                               </div>
                               <div
                                 className={`p-3 rounded-lg ${isOwnMessage

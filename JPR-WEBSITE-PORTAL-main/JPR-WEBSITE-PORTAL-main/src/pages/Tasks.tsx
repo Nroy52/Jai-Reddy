@@ -11,10 +11,41 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Plus, Download, MessageSquare, Calendar, User, Loader2 } from 'lucide-react';
 import { Task, TaskComment } from '@/lib/seed';
-import { useAuth, User as AuthUser } from '@/contexts/AuthContext';
+import { useAuth, User as AuthUser, UserRole, UserStatus } from '@/contexts/AuthContext';
 import { exportTasksCSV } from '@/lib/csv';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
+
+type TaskCommentRow = {
+  id: string;
+  author_user_id: string;
+  text: string;
+  created_at: string;
+};
+
+type TaskRow = {
+  id: string;
+  title: string;
+  description?: string | null;
+  status: Task['status'];
+  priority: Task['priority'];
+  due_date?: string | null;
+  assignee_user_id: string;
+  created_by_user_id: string;
+  ftu_id?: string | null;
+  created_at: string;
+  updated_at: string;
+  comments?: TaskCommentRow[];
+};
+
+type ProfileRow = {
+  id: string;
+  name?: string | null;
+  email: string;
+  role?: UserRole;
+  team_tag?: string | null;
+  status?: UserStatus;
+};
 
 const Tasks = () => {
   const { user } = useAuth();
@@ -31,7 +62,7 @@ const Tasks = () => {
     try {
       setIsLoading(true);
       const { data, error } = await supabase
-        .from('tasks')
+        .from<TaskRow>('tasks')
         .select(`
           *,
           comments:task_comments(*)
@@ -51,7 +82,7 @@ const Tasks = () => {
           assigneeUserId: item.assignee_user_id,
           createdByUserId: item.created_by_user_id,
           ftuId: item.ftu_id,
-          comments: (item.comments || []).map((c: any) => ({
+          comments: (item.comments || []).map((c: TaskCommentRow) => ({
             id: c.id,
             authorUserId: c.author_user_id,
             text: c.text,
@@ -82,7 +113,7 @@ const Tasks = () => {
     const loadUsers = async () => {
       try {
         const { data, error } = await supabase
-          .from('profiles')
+          .from<ProfileRow>('profiles')
           .select('id, name, email, role, team_tag, status');
 
         if (data) {
@@ -92,9 +123,9 @@ const Tasks = () => {
               id: u.id,
               name: u.name || u.email || 'Unknown',
               email: u.email,
-              role: u.role as any,
+              role: u.role || 'Guest',
               teamTag: u.team_tag,
-              status: u.status as any,
+              status: u.status || 'pending',
               signupDate: new Date().toISOString()
             }));
           setApprovedUsers(mappedUsers);
@@ -174,11 +205,11 @@ const Tasks = () => {
       });
       setShowAddTask(false);
       fetchTasks();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error creating task:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create task',
+        description: error instanceof Error ? error.message : 'Failed to create task',
         variant: 'destructive'
       });
     }
@@ -249,7 +280,7 @@ const Tasks = () => {
 
   const getUserName = (userId: string) => {
     const user = approvedUsers.find(u => u.id === userId);
-    return user ? `${user.name} — ${user.role}` : 'Unknown';
+    return user ? `${user.name} - ${user.role}` : 'Unknown';
   };
 
   const getPriorityColor = (priority: Task['priority']) => {
@@ -389,7 +420,7 @@ const Tasks = () => {
                       <SelectContent>
                         {approvedUsers.map(u => (
                           <SelectItem key={u.id} value={u.id}>
-                            {u.name} — {u.role}
+                            {u.name} - {u.role}
                           </SelectItem>
                         ))}
                       </SelectContent>

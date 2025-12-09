@@ -19,7 +19,7 @@ import Contacts from "./pages/Contacts";
 import Vault from "./pages/Vault";
 import Tasks from "./pages/Tasks";
 import Messages from "./pages/Messages";
-import Review from "./pages/Review";
+import Profile from "./pages/Profile";
 import Explorer from "./pages/Explorer";
 import NotFound from "./pages/NotFound";
 
@@ -125,10 +125,10 @@ const App = () => {
                   </ProtectedRoute>
                 } />
 
-                <Route path="/review" element={
+                <Route path="/profile" element={
                   <ProtectedRoute>
                     <DashboardLayout>
-                      <Review />
+                      <Profile />
                     </DashboardLayout>
                   </ProtectedRoute>
                 } />

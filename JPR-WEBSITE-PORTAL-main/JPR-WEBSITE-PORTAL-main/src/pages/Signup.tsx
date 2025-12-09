@@ -17,6 +17,7 @@ const Signup = () => {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>('Guest');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPolicy, setShowPolicy] = useState(false);
 
   const ALL_ROLES: UserRole[] = [
     'Super User', 'CEO', 'Director', 'Managing Director', 'Admin', 'Staff',
@@ -51,6 +52,12 @@ const Signup = () => {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden">
       <div className="absolute inset-0 gradient-hero opacity-10" />
+
+      <div className="absolute top-4 right-4 z-20">
+        <Button variant="ghost" size="sm" onClick={() => setShowPolicy(true)} className="text-xs">
+          Privacy & Terms
+        </Button>
+      </div>
 
       <div className="w-full max-w-md relative z-10 animate-fade-in flex flex-col items-center">
         <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors self-start">
@@ -134,6 +141,31 @@ const Signup = () => {
           </form>
         </Card>
       </div>
+
+      {showPolicy && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-30 px-4">
+          <div className="max-w-2xl w-full bg-white dark:bg-slate-900 rounded-xl shadow-2xl border p-6 space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold">Privacy Policy</h3>
+                <p className="text-sm text-muted-foreground">
+                  We collect only the data needed to operate this portal (your account details and in-app activity). Data is encrypted in transit and at rest.
+                  You may request access or deletion of your records through our support channel.
+                </p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setShowPolicy(false)}>Close</Button>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold">Terms & Conditions</h3>
+              <p className="text-sm text-muted-foreground">
+                Access is for authorized stakeholders only. By continuing, you agree to confidentiality, appropriate use of shared materials,
+                and compliance with applicable regulations. Access may be suspended for misuse or security concerns.
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground">Last updated: Jan 2025</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

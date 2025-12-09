@@ -14,6 +14,7 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPolicy, setShowPolicy] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,6 +42,12 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden">
       <div className="absolute inset-0 gradient-hero opacity-10" />
+
+      <div className="absolute top-4 right-4 z-20">
+        <Button variant="ghost" size="sm" onClick={() => setShowPolicy(true)} className="text-xs">
+          Privacy & Terms
+        </Button>
+      </div>
 
       <div className="w-full max-w-md relative z-10 animate-fade-in">
         <Card className="border-none shadow-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
@@ -107,6 +114,31 @@ const Login = () => {
           </form>
         </Card>
       </div>
+
+      {showPolicy && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-30 px-4">
+          <div className="max-w-2xl w-full bg-white dark:bg-slate-900 rounded-xl shadow-2xl border p-6 space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold">Privacy Policy</h3>
+                <p className="text-sm text-muted-foreground">
+                  We collect only the data needed to operate this portal (your account details and in-app activity). Data is encrypted in transit and at rest.
+                  You may request access or deletion of your records through our support channel.
+                </p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setShowPolicy(false)}>Close</Button>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold">Terms & Conditions</h3>
+              <p className="text-sm text-muted-foreground">
+                Access is for authorized stakeholders only. By continuing, you agree to confidentiality, appropriate use of shared materials,
+                and compliance with applicable regulations. Access may be suspended for misuse or security concerns.
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground">Last updated: Jan 2025</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

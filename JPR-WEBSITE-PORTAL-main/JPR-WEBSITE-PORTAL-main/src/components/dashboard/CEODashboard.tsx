@@ -24,6 +24,17 @@ import { CEO_DASHBOARD_DATA, Pillar } from '@/data/ceoDashboardData';
 import { getStatusEmoji, calculateAggregateTrend } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 
+interface DashboardTask {
+  id: string;
+  title: string;
+  description?: string | null;
+  status?: string | null;
+  priority?: string | null;
+  dueDate?: string | null;
+  assigneeId?: string | null;
+  ftuId?: string | null;
+}
+
 const DomainCard = ({
   pillar,
   onClick,
@@ -61,7 +72,7 @@ export const CEODashboard = ({ activeObjectives = 0, netWorth = null }: { active
   const { user } = useAuth();
   const navigate = useNavigate();
   const [profileImage, setProfileImage] = useState<string | null>(null);
-  const [tasks, setTasks] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<DashboardTask[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -81,7 +92,7 @@ export const CEODashboard = ({ activeObjectives = 0, netWorth = null }: { active
       if (error) throw error;
 
       if (data) {
-        const mappedTasks = data.map(t => ({
+        const mappedTasks: DashboardTask[] = data.map(t => ({
           id: t.id,
           title: t.title,
           description: t.description,
@@ -213,8 +224,8 @@ export const CEODashboard = ({ activeObjectives = 0, netWorth = null }: { active
                   </div>
                 </div>
                 <div className="space-y-1 mt-1">
-                  <p className="text-xs text-slate-600">• Quarterly review due</p>
-                  <p className="text-xs text-slate-600">• Investment rebalancing</p>
+                  <p className="text-xs text-slate-600">- Quarterly review due</p>
+                  <p className="text-xs text-slate-600">- Investment rebalancing</p>
                 </div>
               </CardContent>
             </Card>
@@ -239,8 +250,8 @@ export const CEODashboard = ({ activeObjectives = 0, netWorth = null }: { active
                 <div className="space-y-4">
                   {(() => {
                     const priorityTasks = tasks
-                      .filter((t: any) => t.status !== 'Done' && (t.priority === 'Critical' || t.priority === 'High'))
-                      .sort((a: any, b: any) => {
+                      .filter((t) => t.status !== 'Done' && (t.priority === 'Critical' || t.priority === 'High'))
+                      .sort((a, b) => {
                         // Sort by priority (Critical first) then due date
                         if (a.priority === 'Critical' && b.priority !== 'Critical') return -1;
                         if (b.priority === 'Critical' && a.priority !== 'Critical') return 1;
@@ -256,7 +267,7 @@ export const CEODashboard = ({ activeObjectives = 0, netWorth = null }: { active
                       );
                     }
 
-                    return priorityTasks.map((task: any, i: number) => (
+                    return priorityTasks.map((task, i: number) => (
                       <div key={task.id} className="flex items-start gap-4 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-800 cursor-pointer" onClick={() => navigate('/tasks')}>
                         <div className={`p-2 rounded-full ${task.priority === 'Critical' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'}`}>
                           <AlertCircle className="h-4 w-4" />

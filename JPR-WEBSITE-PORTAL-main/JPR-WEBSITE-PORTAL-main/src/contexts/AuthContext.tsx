@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
+import { useCallback } from 'react';
 
 // Define roles strictly as per requirement
 export type UserRole =
@@ -22,6 +23,18 @@ export interface User {
   signupDate: string;
   lastLogin?: string;
 }
+
+type ProfileRow = {
+  id: string;
+  email: string;
+  full_name?: string | null;
+  name?: string | null;
+  role: UserRole;
+  team_tag?: string | null;
+  status: UserStatus;
+  created_at?: string | null;
+  last_login?: string | null;
+};
 
 interface AuthContextType {
   loading: boolean;
@@ -69,6 +82,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   // Load profile when session changes
+  const mapProfileToUser = useCallback((profileData: ProfileRow) => {
+    setUser({
+      id: profileData.id,
+      email: profileData.email || session?.user.email || '',
+      name: profileData.full_name || profileData.name || 'User',
+      role: profileData.role || 'Guest',
+      teamTag: profileData.team_tag || undefined,
+      status: profileData.status || 'pending',
+      signupDate: profileData.created_at || new Date().toISOString(),
+      lastLogin: new Date().toISOString()
+    });
+  }, [session]);
+
   useEffect(() => {
     const loadProfile = async () => {
       if (!session) {
@@ -78,7 +104,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       try {
         const { data, error } = await supabase
-          .from('profiles')
+          .from<ProfileRow>('profiles')
           .select('*')
           .eq('id', session.user.id)
           .single();
@@ -87,7 +113,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (error && error.code === 'PGRST116') {
           console.warn('Profile missing for user, attempting creation...');
           const { data: newProfile, error: insertError } = await supabase
-            .from('profiles')
+            .from<ProfileRow>('profiles')
             .insert({
               id: session.user.id,
               full_name: session.user.user_metadata?.full_name ?? session.user.email,
@@ -110,20 +136,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     loadProfile();
-  }, [session]);
-
-  const mapProfileToUser = (profileData: any) => {
-    setUser({
-      id: profileData.id,
-      email: profileData.email || session?.user.email || '',
-      name: profileData.full_name || profileData.name || 'User',
-      role: (profileData.role as UserRole) || 'Guest',
-      teamTag: profileData.team_tag,
-      status: (profileData.status as UserStatus) || 'pending',
-      signupDate: profileData.created_at || new Date().toISOString(),
-      lastLogin: new Date().toISOString()
-    });
-  };
+  }, [mapProfileToUser, session]);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -154,16 +167,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       await signIn(e, p);
       return { success: true };
-    } catch (err: any) {
-      return { success: false, message: err.message };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Login failed';
+      return { success: false, message };
     }
   };
 
   const logout = signOut;
 
   const getPendingUsers = async () => {
-    const { data } = await supabase.from('profiles').select('*').eq('status', 'pending');
-    return (data || []).map((p: any) => ({
+    const { data } = await supabase.from<ProfileRow>('profiles').select('*').eq('status', 'pending');
+    return (data || []).map((p) => ({
       id: p.id,
       email: p.email,
       name: p.full_name || p.name,
@@ -175,8 +189,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const getAllUsers = async () => {
-    const { data } = await supabase.from('profiles').select('*');
-    return (data || []).map((p: any) => ({
+    const { data } = await supabase.from<ProfileRow>('profiles').select('*');
+    return (data || []).map((p) => ({
       id: p.id,
       email: p.email,
       name: p.full_name || p.name,

@@ -9,7 +9,7 @@ import {
   Shield,
   CheckSquare,
   MessageSquare,
-  FileText,
+  UserCircle,
   LogOut,
   Crown
 } from 'lucide-react';
@@ -73,7 +73,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     { path: '/vault', icon: Shield, label: 'Vault' },
     { path: '/tasks', icon: CheckSquare, label: 'Tasks' },
     { path: '/messages', icon: MessageSquare, label: 'Messages' },
-    { path: '/review', icon: FileText, label: 'Review' },
+    { path: '/profile', icon: UserCircle, label: 'Profile' },
   ];
 
   return (
