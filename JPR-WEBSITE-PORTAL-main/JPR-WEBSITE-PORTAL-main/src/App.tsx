@@ -31,6 +31,7 @@ const ALLOWED_ORIGINS = [
   "https://www.jaireddy.uk",
   "http://jaireddy.uk",
   "http://www.jaireddy.uk",
+  "https://jai-reddy.netlify.app",
 ];
 
 const OriginGuard = ({ children }: { children: React.ReactNode }) => {
@@ -39,8 +40,9 @@ const OriginGuard = ({ children }: { children: React.ReactNode }) => {
     const isDev = import.meta.env.DEV;
     const hostname = new URL(origin).hostname;
     const isVercel = /\.vercel\.app$/.test(hostname);
+    const isNetlify = hostname.endsWith("netlify.app");
 
-    if (!isDev && !ALLOWED_ORIGINS.includes(origin) && !isVercel) {
+    if (!isDev && !ALLOWED_ORIGINS.includes(origin) && !isVercel && !isNetlify) {
       document.body.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui;flex-direction:column;gap:1rem;">
           <h1 style="color:#991b1b;font-size:2rem;">Access Denied</h1>
@@ -55,7 +57,9 @@ const OriginGuard = ({ children }: { children: React.ReactNode }) => {
 
 const App = () => {
   // Use /portal in production (Vercel) and / in dev/preview
-  const basename = import.meta.env.DEV ? "/" : "/portal";
+  const currentHost = typeof window !== "undefined" ? window.location.hostname : "";
+  const isJaireddy = currentHost.endsWith("jaireddy.uk");
+  const basename = import.meta.env.DEV ? "/" : isJaireddy ? "/portal" : "/";
 
   return (
     <QueryClientProvider client={queryClient}>
