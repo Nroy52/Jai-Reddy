@@ -57,7 +57,9 @@ const App = () => {
   // Use /portal in production (Vercel) and / in dev/preview
   const currentHost = typeof window !== "undefined" ? window.location.hostname : "";
   const isJaireddy = currentHost.endsWith("jaireddy.uk");
-  const basename = import.meta.env.DEV ? "/" : isJaireddy ? "/portal" : "/";
+  const isPortalPath =
+    typeof window !== "undefined" ? window.location.pathname.startsWith("/portal") : false;
+  const basename = import.meta.env.DEV ? "/" : isJaireddy || isPortalPath ? "/portal" : "/";
 
   return (
     <QueryClientProvider client={queryClient}>
