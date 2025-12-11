@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 
 const Signup = () => {
   const navigate = useNavigate();
-  const { signup } = useAuth();
+  const { signUp } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -34,16 +34,11 @@ const Signup = () => {
       // Simulate network delay
       await new Promise(resolve => setTimeout(resolve, 800));
 
-      const result = await signup(email, password, name, role);
-
-      if (result.success) {
-        toast.success('Account created successfully!');
-        navigate('/pending');
-      } else {
-        toast.error(result.message || 'Signup failed');
-      }
-    } catch (error) {
-      toast.error('An error occurred');
+      await signUp(email, password, name, role);
+      toast.success('Account created successfully!');
+      navigate('/pending');
+    } catch (error: any) {
+      toast.error(error?.message || 'Signup failed');
     } finally {
       setIsLoading(false);
     }
